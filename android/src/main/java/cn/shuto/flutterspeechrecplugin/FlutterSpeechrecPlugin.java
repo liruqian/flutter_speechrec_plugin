@@ -61,12 +61,12 @@ public class FlutterSpeechrecPlugin implements MethodCallHandler, PluginRegistry
         this.result = result;
         if (call.method.equals("getPlatformVersion")) {
 
-            String appVersionName ="";
+            String appVersionName = "";
 
             PackageManager manager = context.getPackageManager();
             try {
                 PackageInfo info = manager.getPackageInfo(context.getPackageName(), 0);
-                 appVersionName = info.versionName; // 版本名
+                appVersionName = info.versionName; // 版本名
             } catch (PackageManager.NameNotFoundException e) {
                 // TODO Auto-generated catch blockd
                 e.printStackTrace();
@@ -104,16 +104,36 @@ public class FlutterSpeechrecPlugin implements MethodCallHandler, PluginRegistry
     }
 
     private void startListen() {
-        requestPermissions();
-        mIat = SpeechRecognizer.createRecognizer(context, mInitListener);
-        if (mIat.isListening()) {
-            mIat.stopListening();
+        //requestPermissions();
+        if (ContextCompat.checkSelfPermission(context,
+                Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(this.context,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(this.context,
+                Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED|| ContextCompat.checkSelfPermission(this.context,
+                Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions((Activity) this.context,
+                    new String[]{
+                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                            Manifest.permission.RECORD_AUDIO,
+                            Manifest.permission.CAMERA
+                    },
+                    REQUEST_CODE_GRANT_PERMISSIONS);
+        } else {
+            mIat = SpeechRecognizer.createRecognizer(context, mInitListener);
+            if (mIat.isListening()) {
+                mIat.stopListening();
+            }
+            // 移动数据分析，收集开始听写事件
+            FlowerCollector.onEvent(context, "iat_recognize");
+            mIatResults.clear();
+            setParam();
+            mIat.startListening(mRecognizerListener);
         }
-        // 移动数据分析，收集开始听写事件
-        FlowerCollector.onEvent(context, "iat_recognize");
-        mIatResults.clear();
-        setParam();
-        mIat.startListening(mRecognizerListener);
+
     }
 
     /**
